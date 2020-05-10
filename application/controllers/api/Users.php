@@ -37,17 +37,30 @@ class Users extends RestController
     {
         // Construct the parent class
         parent::__construct();
+        $this->exceptionRoute();
+        
         $this->load->library('JwtAuth');
-        
-        // if (
-        //     $this->uri->segment(3) != 'check_login'
-        // ) {
-        //     // enable this for JWT concept
-        //     //$this->credentials = $this->jwtauth->check();
-        // }
-        
         $this->load->model('UserModel');
-        $this->jwtSecret = "PT.ASIASEKURITIINDONESIA";
+        $this->jwtSecret = "PTASIASEKURITIINDONESIA";
+    }
+
+    /**
+     * Check the routes 
+     * Exception for request of JWT
+     *
+     * @return void
+     */
+    private function exceptionRoute()
+    {
+        $route = $this->uri->segment(3);
+        $exception = array(
+            'check_login',
+            'store'
+        );
+
+        if ( !in_array($route, $exception) ) {
+            $this->credentials = $this->jwtauth->check();
+        }
     }
 
     /**
@@ -61,14 +74,12 @@ class Users extends RestController
     {
         $user = $this->GlobalModel->getGlobal('users', 'id', $userId);
         $payload = [
-            'iss' => "verifsuite", // Issuer of the token
-            'sub' => $user->username, // Subject of the token
-            'iat' => time(), // Time when JWT was issued. 
-            // 'exp' => time() + 86400 // Expiration time 24 jam
+            'iss'  => "verifsuite",
+            'sub'  => base64_encode($user->id),
+            'name' => $user->name,
+            'iat'  => time(),
+            // 'exp' => time() + 86400 // Expiration time 24 hours
         ];
-
-        // As you can see we are passing `JWT_SECRET` as the second parameter that will 
-        // be used to decode the token in the future.
         return JWT::encode($payload, $this->jwtSecret);
     }
 
@@ -85,7 +96,6 @@ class Users extends RestController
 
         $this->form_validation->set_rules('username', 'Username', 'trim|required|xss_clean');
         $this->form_validation->set_rules('password', 'Password', 'trim|required|xss_clean');
-
 
         if ($this->form_validation->run()) {
             $dataUser = $this->GlobalModel->getGlobal('users', 'username', $username);
@@ -163,32 +173,26 @@ class Users extends RestController
      */
     public function store_post()
     {
-        $name     = trim($this->post('name'));
         $username = trim($this->post('username'));
         $password = trim($this->post('password'));
         $email    = trim($this->post('email'));
         $phone    = trim($this->post('phone'));
-        $status   = trim($this->post('status'));
-        $level    = trim($this->post('level'));
 
-        $this->form_validation->set_rules('name', 'Name', 'trim|required|min_length[3]|xss_clean');
         $this->form_validation->set_rules('username', 'Username', 'trim|required|min_length[3]|xss_clean|is_unique[users.username]');
         $this->form_validation->set_rules('password', 'Password', 'trim|required|min_length[4]|xss_clean');
-        $this->form_validation->set_rules('email', 'Email', 'trim|required|valid_email|xss_clean|is_unique[users.email]');
-        $this->form_validation->set_rules('phone', 'Phone', 'trim|required|numeric|xss_clean');
-        $this->form_validation->set_rules('status', 'Status', 'trim|xss_clean');
-        $this->form_validation->set_rules('level', 'Level', 'trim|required|xss_clean');
+        $this->form_validation->set_rules('email', 'Email', 'trim|valid_email|xss_clean|is_unique[users.email]');
+        $this->form_validation->set_rules('phone', 'Phone', 'trim|numeric|xss_clean');
 
         if ($this->form_validation->run()) {
 
             $data = array(
-                'name'       => $name,
+                'name'       => $username,
                 'username'   => $username,
                 'password'   => password_hash($password,PASSWORD_DEFAULT),
                 'email'      => $email,
                 'phone'      => $phone,
-                'level'      => $level,
-                'status'     => ($status == 'on') ? 'active' : 'inactive',
+                'status'     => 'active',
+                'level'      => 'user',
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             );
@@ -199,7 +203,7 @@ class Users extends RestController
                 $this->response([
                     'error'   => false,
                     'message' => 'Successfully saved data user'
-                ], 201);
+                ], 200);
             } else {
 
                 $this->response([
