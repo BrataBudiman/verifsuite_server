@@ -126,6 +126,39 @@ class User extends RestController
             ], 200);
         }
     }
+
+    /**
+     * Create a new user 
+     * to ttlock cloud api
+     *
+     * @return void
+     */
+    public function destroy_delete()
+    {
+        $apiUrl = $this->baseUrlTTLOCK . "/v3/user/delete";
+        $username = $this->delete('username');
+
+        try {
+            $client  = new Client();
+            $request = $client->request('POST', $apiUrl, [
+                'form_params' => [
+                    'clientId'     => $this->appSecret,
+                    'clientSecret' => $this->idSecret,
+                    'username'     => $username,
+                    'date'         => intval(microtime(true) * 1000),
+                ],
+            ]);
+            $body     = $request->getBody();
+            $response = json_decode($body);
+
+            $this->response($response, 200);
+        } catch (\Exception $ex) {
+            $this->response([
+                'error'   => true,
+                'message' => $ex->getMessage(),
+            ], 200);
+        }
+    }
 }
 
 /* End of file User.php */
